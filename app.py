@@ -165,7 +165,7 @@ def tts():
     infer_max_new_token = utils.get_parameter(request, "infer_max_new_token", defaults["infer_max_new_token"], int)
     wav = utils.get_parameter(request, "wav", defaults["wav"], int)
         
-        
+    print(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 请求参数:text={text}, prompt={prompt}, custom_voice={custom_voice}, voice={voice}, temperature={temperature}, top_p={top_p}, top_k={top_k}, skip_refine={skip_refine}, is_stream={is_stream}, speed={speed}, text_seed={text_seed}, refine_max_new_token={refine_max_new_token}, infer_max_new_token={infer_max_new_token}, wav={wav}")
     
     app.logger.info(f"[tts]{text=}\n{voice=},{skip_refine=}\n")
     if not text:
@@ -239,7 +239,7 @@ def tts():
     short_text=""
     for it in new_text:
         if len(it)<30:
-            short_text+=f"{it} [uv_break] "
+            short_text+=f"{it}"
             if len(short_text)>30:
                 retext.append(short_text)
                 short_text=""
@@ -249,7 +249,7 @@ def tts():
     if len(short_text)>30 or len(retext)<1:
         retext.append(short_text)
     elif short_text:
-        retext[-1]+=f" [uv_break] {short_text}"
+        retext[-1]+=f"{short_text}"
         
     new_text=retext
     

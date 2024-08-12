@@ -171,7 +171,7 @@ def split_text(text_list):
                 print(e)
                 haserror=True
                 tmp=num2text(text)
-
+        tmp = tmp.replace("·", "").replace("？", " ").replace("?", " ")  # 去掉和转换文本中ChatTTS会读错乱的符号
         if len(tmp)>200:
             tmp_res=split_text_by_punctuation(tmp)
             result=result+tmp_res
