@@ -9,6 +9,7 @@ import pandas as pd
 from .zh_normalization import TextNormalizer
 from .cfg import SPEAKER_DIR
 from functools import partial
+from num2words import num2words
 
 def openweb(url):
     time.sleep(3)
@@ -31,18 +32,20 @@ def get_parameter(request, param, default, cast_type):
 
 # 数字转为英文读法
 def num_to_english(num):
-
     num_str = str(num)
-    # English representations for numbers 0-9
     english_digits = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-    units = ["", "ten", "hundred", "thousand"]
     big_units = ["", "thousand", "million", "billion", "trillion"]
-    result = ""
-    need_and = False  # Indicates whether 'and' needs to be added
-    part = []  # Stores each group of 4 digits
-    is_first_part = True  # Indicates if it is the first part for not adding 'and' at the beginning
+    teen_map = {
+        11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen",
+        16: "sixteen", 17: "seventeen", 18: "eighteen", 19: "nineteen"
+    }
+    tens_map = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
 
-    # Split the number into 3-digit groups
+    result = []
+    need_and = False
+    part = []
+
+    # 将数字按三位分组
     while num_str:
         part.append(num_str[-3:])
         num_str = num_str[:-3]
@@ -50,47 +53,37 @@ def num_to_english(num):
     part.reverse()
 
     for i, p in enumerate(part):
-        p_str = ""
+        p_str = []
         digit_len = len(p)
-        if int(p) == 0 and i < len(part) - 1:
-            continue
-
         hundreds_digit = int(p) // 100 if digit_len == 3 else None
-        tens_digit = int(p) % 100 if digit_len >= 2 else int(p[0] if digit_len == 1 else p[1])
+        tens_digit = int(p[-2:]) if digit_len >= 2 else int(p[-1])
 
-        # Process hundreds
+        # 处理百位数
         if hundreds_digit is not None and hundreds_digit != 0:
-            p_str += english_digits[hundreds_digit] + " hundred"
+            p_str.append(english_digits[hundreds_digit] + " hundred")
             if tens_digit != 0:
-                p_str += " and "
+                p_str.append("and")
 
-        # Process tens and ones
-        if 10 < tens_digit < 20:  # Teens exception
-            teen_map = {
-                11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen",
-                16: "sixteen", 17: "seventeen", 18: "eighteen", 19: "nineteen"
-            }
-            p_str += teen_map[tens_digit]
+        # 处理十位和个位数
+        if 10 < tens_digit < 20:  # 处理11到19的特殊情况
+            p_str.append(teen_map[tens_digit])
         else:
-            tens_map = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
             tens_val = tens_digit // 10
             ones_val = tens_digit % 10
             if tens_val >= 2:
-                p_str += tens_map[tens_val] + (" " + english_digits[ones_val] if ones_val != 0 else "")
-            elif tens_digit != 0 and tens_val < 2:  # When tens_digit is in [1, 9]
-                p_str += english_digits[tens_digit]
+                p_str.append(tens_map[tens_val])
+                if ones_val != 0:
+                    p_str.append(english_digits[ones_val])
+            elif tens_digit != 0:
+                p_str.append(english_digits[ones_val])
 
-        if p_str and not is_first_part and need_and:
-            result += " and "
-        result += p_str
-        if i < len(part) - 1 and int(p) != 0:
-            result += " " + big_units[len(part) - i - 1] + ", "
+        if p_str:
+            result.append(" ".join(p_str))
+            if i < len(part) - 1 and int(p) != 0:
+                result.append(big_units[len(part) - i - 1])
 
-        is_first_part = False
-        if int(p) != 0:
-            need_and = True
+    return " ".join(result).capitalize()
 
-    return result.capitalize()
 
 
 def get_lang(text):
@@ -170,7 +163,7 @@ def split_text(text_list):
                 print(f"nemo处理英文失败，改用自定义预处理")
                 print(e)
                 haserror=True
-                tmp=num2text(text)
+                tmp=convert_numbers_to_words(text)
         tmp = tmp.replace("·", "").replace("？", " ").replace("?", " ")  # 去掉和转换文本中ChatTTS会读错乱的符号
         if len(tmp)>200:
             tmp_res=split_text_by_punctuation(tmp)
@@ -312,3 +305,19 @@ def modelscope_status():
     except Exception as e:
         return False
     return True
+
+
+def convert_numbers_to_words(text):
+    def replace_number(match):
+        number = match.group(0)
+        # 处理整数和小数部分
+        if '.' in number:
+            integer_part, fractional_part = number.split('.')
+            return f"{num2words(integer_part)} point {' '.join(num2words(digit) for digit in fractional_part)}"
+        else:
+            return num2words(number)
+
+    # 使用正则表达式匹配数字
+    return re.sub(r'\b\d+(\.\d+)?\b', replace_number, text)
+
+
