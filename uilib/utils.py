@@ -164,7 +164,7 @@ def split_text(text_list):
                 print(e)
                 haserror=True
                 tmp=convert_numbers_to_words(text)
-        tmp = tmp.replace("·", "").replace("？", " ").replace("?", " ")  # 去掉和转换文本中ChatTTS会读错乱的符号
+        tmp = custom_process(tmp)
         if len(tmp)>200:
             tmp_res=split_text_by_punctuation(tmp)
             result=result+tmp_res
@@ -319,5 +319,15 @@ def convert_numbers_to_words(text):
 
     # 使用正则表达式匹配数字
     return re.sub(r'\b\d+(\.\d+)?\b', replace_number, text)
+
+
+def custom_process(text):
+    # 去掉和转换文本中ChatTTS会读错乱的符号
+    text = text.replace("·", "").replace("？", " ").replace("?", " ")
+
+    # 纠正“迫击炮”发音为“排击炮”
+    text = text.replace("迫击炮", "排击炮")
+
+    return text
 
 
